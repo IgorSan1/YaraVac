@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar Vacinação - YaraVac</title>
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/global.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/page-forms.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <header class="main-header">
+      <a href="home.html" class="logo-container">
+        <img src="assets/logo.png" alt="YaraVac Logo" />
+        <h1>YaraVac</h1>
+      </a>
+      <div class="user-actions">
+        <a href="notificacoes.html" class="notification-bell">
+          <i class="fa-regular fa-bell"></i>
+          <div class="badge">3</div>
+        </a>
+        <a href="perfil.html" class="user-profile">
+          <i class="fa-regular fa-user"></i>
+          <span>Usuario@123</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <div class="card">
+        <div class="page-title-container">
+          <h2>Registrar Vacinação</h2>
+        </div>
+        <form id="form-registrar-vacinacao" action="#">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="vacina-nome">Vacina:</label
+              ><input
+                list="lista-vacinas"
+                id="vacina-nome"
+                placeholder="Digite o nome da vacina"
+                required
+              /><datalist id="lista-vacinas"></datalist>
+            </div>
+            <div class="form-group">
+              <label for="pessoa-cpf">Pessoa (CPF):</label
+              ><input
+                type="text"
+                id="pessoa-cpf"
+                placeholder="000.000.000-00"
+                required
+              />
+            </div>
+            <input type="hidden" id="vacina-uuid" />
+            <input type="hidden" id="pessoa-uuid" />
+            <div class="form-group">
+              <label for="aplicacao">Data de aplicação:</label
+              ><input type="date" id="aplicacao" required />
+            </div>
+            <div class="form-group">
+              <label for="proxima">Data próxima dose (opcional):</label
+              ><input type="date" id="proxima" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary">Cancelar</button>
+            <button type="submit" class="btn btn-primary">
+              Registrar Vacinação
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+    <script>
+      (function () {
+        const btn = document.querySelector(".form-actions .btn.btn-secondary");
+        if (btn)
+          btn.addEventListener("click", function () {
+            window.location.href = "home.html";
+          });
+      })();
+    </script>
+    <script>
+      (function () {
+        const API_BASE = "http://localhost:8080/api/v1";
+        const listaVacinas = document.getElementById("lista-vacinas");
+        const vacinaNomeInput = document.getElementById("vacina-nome");
+        const vacinaUuidInput = document.getElementById("vacina-uuid");
+        const pessoaCpfInput = document.getElementById("pessoa-cpf");
+        const pessoaUuidInput = document.getElementById("pessoa-uuid");
+        let vacinasCache = [];
+        let debounceId;
+
+        function formatDateToDDMMYYYY(isoDate) {
+          if (!isoDate) return "";
+          const [y, m, d] = isoDate.split("-");
+          return `${d}/${m}/${y}`;
+        }
+
+        function applyCpfMask(value) {
+          const digits = (value || "").replace(/\D/g, "").slice(0, 11);
+          const part1 = digits.slice(0, 3);
+          const part2 = digits.slice(3, 6);
+          const part3 = digits.slice(6, 9);
+          const part4 = digits.slice(9, 11);
+          let out = part1;
+          if (part2) out += `.${part2}`;
+          if (part3) out += `.${part3}`;
+          if (part4) out += `-${part4}`;
+          return out;
+        }
+
+        pessoaCpfInput.addEventListener("input", () => {
+          pessoaCpfInput.value = applyCpfMask(pessoaCpfInput.value);
+        });
+
+        async function carregarVacinas() {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            alert("Você precisa estar logado para carregar vacinas.");
+            window.location.href = "login.html";
+            return;
+          }
+
+          try {
+            const resp = await fetch(`${API_BASE}/vacina/all?size=200&page=0`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            const data = await resp.json();
+            if (Array.isArray(data.dados) && Array.isArray(data.dados[0])) {
+              vacinasCache = data.dados[0];
+            } else if (Array.isArray(data.dados)) {
+              vacinasCache = data.dados;
+            } else {
+              vacinasCache = [];
+            }
+
+            atualizarDatalist("");
+          } catch (err) {
+            console.error("Erro ao carregar vacinas:", err);
+            alert("Erro ao buscar vacinas do sistema.");
+          }
+        }
+
+        function montarLabelVacina(v) {
+          const nome = v?.nome || "";
+          const lote = v?.numeroLote ? `Lote: ${v.numeroLote}` : "";
+          const fab = v?.fabricante || "";
+          return [nome, lote, fab].filter(Boolean).join(" — ");
+        }
+
+        function atualizarDatalist(filtro) {
+          const f = (filtro || "").toLowerCase();
+          listaVacinas.innerHTML = "";
+          const filtradas = vacinasCache.filter((v) =>
+            (v?.nome || "").toLowerCase().includes(f)
+          );
+          filtradas.slice(0, 20).forEach((v) => {
+            const opt = document.createElement("option");
+            opt.value = montarLabelVacina(v);
+            opt.setAttribute("data-uuid", v.uuid || "");
+            listaVacinas.appendChild(opt);
+          });
+        }
+
+        // Inicializa carregando as vacinas
+        carregarVacinas();
+
+        // Enquanto digita: filtra e sugere
+        vacinaNomeInput.addEventListener("input", () => {
+          clearTimeout(debounceId);
+          const val = vacinaNomeInput.value;
+          debounceId = setTimeout(() => {
+            atualizarDatalist(val);
+            vacinaUuidInput.value = ""; // limpa UUID até selecionar
+          }, 120);
+        });
+
+        // Ao sair do campo, tenta resolver a vacina por correspondência parcial
+        vacinaNomeInput.addEventListener("change", () => {
+          const val = vacinaNomeInput.value.toLowerCase();
+          const opts = Array.from(listaVacinas.options);
+          const found = opts.find((o) => o.value.toLowerCase().includes(val));
+          vacinaUuidInput.value = found
+            ? found.getAttribute("data-uuid") || ""
+            : "";
+          if (!vacinaUuidInput.value) {
+            alert("Por favor, selecione uma vacina válida da lista.");
+          }
+        });
+
+        document
+          .getElementById("form-registrar-vacinacao")
+          .addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const dataAplicacao = formatDateToDDMMYYYY(
+              document.getElementById("aplicacao").value
+            );
+            const dataProximaDose = formatDateToDDMMYYYY(
+              document.getElementById("proxima").value
+            );
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+              alert("Você precisa estar logado para registrar vacinação.");
+              window.location.href = "login.html";
+              return;
+            }
+
+            // Validação CPF
+            const cpfDigits = (pessoaCpfInput.value || "").replace(/\D/g, "");
+            if (cpfDigits.length !== 11) {
+              alert("Informe um CPF válido (11 dígitos).");
+              return;
+            }
+
+            // Buscar pessoa
+            try {
+              const respPessoa = await fetch(
+                `${API_BASE}/pessoa/buscar-por-cpf`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ cpf: cpfDigits }),
+                }
+              );
+              const dataPessoa = await respPessoa.json().catch(() => ({}));
+              if (!respPessoa.ok) {
+                alert(dataPessoa?.mensagem || "Paciente não encontrado");
+                return;
+              }
+              const pessoa = dataPessoa?.dados || dataPessoa;
+              pessoaUuidInput.value = pessoa.uuid || "";
+            } catch (_) {
+              alert("Falha ao buscar paciente por CPF.");
+              return;
+            }
+
+            // Verificar vacina selecionada
+            if (!vacinaUuidInput.value) {
+              alert("Selecione uma vacina válida.");
+              return;
+            }
+
+            // Montar payload
+            const payload = {
+              pessoaUuid: pessoaUuidInput.value.trim(),
+              vacinaUuid: vacinaUuidInput.value.trim(),
+              dataAplicacao,
+              dataProximaDose: dataProximaDose || null,
+            };
+
+            if (
+              !payload.pessoaUuid ||
+              !payload.vacinaUuid ||
+              !payload.dataAplicacao
+            ) {
+              alert("Preencha todos os campos obrigatórios.");
+              return;
+            }
+
+            try {
+              const resp = await fetch(`${API_BASE}/vacinacoes/registrar`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+              });
+              const data = await resp.json().catch(() => ({}));
+
+              if (!resp.ok) {
+                alert(
+                  `Erro ao registrar vacinação: ${
+                    data?.mensagem || resp.status
+                  }`
+                );
+                return;
+              }
+
+              alert("Vacinação registrada com sucesso!");
+              window.location.href = "home.html";
+            } catch (err) {
+              alert("Falha de comunicação com o servidor.");
+            }
+          });
+      })();
+    </script>
+  </body>
+</html>

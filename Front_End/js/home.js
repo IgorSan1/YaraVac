@@ -3,6 +3,54 @@
     const searchBar = document.querySelector(".search-bar");
     let debounceId;
 
+    // Verificar se o usuario eh ADMIN e exibir o botao de cadastro de usuarios
+    verificarPermissaoAdmin();
+
+    async function verificarPermissaoAdmin() {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            return;
+        }
+
+        try {
+            const resp = await fetch(`${API_BASE}/usuario/perfil`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+            });
+
+            if (!resp.ok) {
+                return;
+            }
+
+            const data = await resp.json().catch(() => ({}));
+
+            // Normaliza possiveis formatos de resposta
+            let usuario = null;
+            if (Array.isArray(data?.dados) && Array.isArray(data.dados[0])) {
+                usuario = data.dados[0][0];
+            } else if (Array.isArray(data?.dados)) {
+                usuario = data.dados[0];
+            } else if (data?.dados) {
+                usuario = data.dados;
+            } else {
+                usuario = data;
+            }
+
+            // Verificar se o usuario tem a role ADMIN
+            if (usuario && usuario.roles && usuario.roles.includes("ADMIN")) {
+                const btnCadastroUsuario = document.getElementById("btnCadastroUsuario");
+                if (btnCadastroUsuario) {
+                    btnCadastroUsuario.style.display = "";
+                }
+            }
+        } catch (err) {
+            console.error("Erro ao verificar permissoes:", err);
+        }
+    }
+
     // Função para aplicar máscara de CPF
     function applyCpfMask(value) {
         const digits = (value || "").replace(/\D/g, "").slice(0, 11);

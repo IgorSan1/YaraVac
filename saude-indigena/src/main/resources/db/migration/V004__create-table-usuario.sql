@@ -1,4 +1,4 @@
-CREATE TABLE usuario.saude
+CREATE TABLE saude.usuario
 (
     id                  BIGINT                          NOT NULL,
     uuid                UUID            UNIQUE          NOT NULL,
@@ -10,6 +10,7 @@ CREATE TABLE usuario.saude
     usuario             VARCHAR(30)                     NOT NULL,
     password            VARCHAR(255)                    NOT NULL,
     cargo               VARCHAR(30)                     NOT NULL,
+    role                VARCHAR(50)                     NOT NULL,
 
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,

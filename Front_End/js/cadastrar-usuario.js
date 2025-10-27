@@ -3,57 +3,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("cadastroUsuarioForm");
     const btnCancelar = document.getElementById("btnCancelar");
 
-    // Verificar se o usuário é ADMIN ao carregar a página
-    verificarPermissaoAdmin();
+    // Não precisa mais verificar se é ADMIN - qualquer usuário autenticado pode cadastrar
+    verificarAutenticacao();
 
-    async function verificarPermissaoAdmin() {
+    function verificarAutenticacao() {
         const token = localStorage.getItem("token");
         if (!token) {
             alert("Você precisa estar logado para acessar esta página.");
             window.location.href = "login.html";
             return;
-        }
-
-        try {
-            // Buscar informações do usuário logado para verificar a role
-            const resp = await fetch(`${API_BASE}/usuario/perfil`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
-
-            if (!resp.ok) {
-                alert("Erro ao verificar permissões.");
-                window.location.href = "home.html";
-                return;
-            }
-
-            const data = await resp.json().catch(() => ({}));
-
-            // Normaliza possíveis formatos de resposta
-            let usuario = null;
-            if (Array.isArray(data?.dados) && Array.isArray(data.dados[0])) {
-                usuario = data.dados[0][0];
-            } else if (Array.isArray(data?.dados)) {
-                usuario = data.dados[0];
-            } else if (data?.dados) {
-                usuario = data.dados;
-            } else {
-                usuario = data;
-            }
-
-            // Verificar se o usuário tem a role ADMIN
-            if (!usuario || !usuario.roles || !usuario.roles.includes("ADMIN")) {
-                alert("Você não tem permissão para acessar esta página. Apenas administradores podem cadastrar novos usuários.");
-                window.location.href = "home.html";
-                return;
-            }
-        } catch (err) {
-            console.error("Erro ao verificar permissões:", err);
-            alert("Erro ao verificar permissões. Tente novamente.");
-            window.location.href = "home.html";
         }
     }
 
@@ -125,8 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (senha.length < 6) {
-            alert("A senha deve ter pelo menos 6 caracteres.");
+        if (senha.length < 4) {
+            alert("A senha deve ter pelo menos 4 caracteres.");
             return;
         }
 
@@ -141,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const partes = dataNascimento.split("-");
         const dataNascimentoFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
 
+        // Ajustar o payload para corresponder ao que o backend espera
         const data = {
             nomeCompleto,
             usuario,
@@ -150,8 +109,10 @@ document.addEventListener("DOMContentLoaded", () => {
             dataNascimento: dataNascimentoFormatada,
             cargo,
             password: senha,
-            roles: [role]
+            role: role // Enviar como string direta
         };
+
+        console.log("📤 Enviando payload:", data);
 
         try {
             const token = localStorage.getItem("token");
@@ -170,26 +131,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(data)
             });
 
+            console.log("📥 Status da resposta:", response.status);
+
             if (response.ok) {
                 const result = await response.json();
+                console.log("✅ Resposta:", result);
                 alert(result.mensagem || "Usuário cadastrado com sucesso!");
                 form.reset();
                 window.location.href = "home.html";
             } else {
                 const errorData = await response.json().catch(() => ({ mensagem: response.statusText }));
-                alert(`Erro ao cadastrar usuário: ${errorData.mensagem}`);
+                console.error("❌ Erro:", errorData);
+                alert(`Erro ao cadastrar usuário: ${errorData.mensagem || errorData.message || 'Erro desconhecido'}`);
             }
         } catch (error) {
-            console.error("Erro:", error);
-            alert("Erro ao conectar com o servidor.");
+            console.error("❌ Erro na requisição:", error);
+            alert("Erro ao conectar com o servidor. Verifique sua conexão.");
         }
     });
 
     // Botão de cancelar
     if (btnCancelar) {
         btnCancelar.addEventListener("click", () => {
-            window.location.href = "home.html";
+            if (confirm("Deseja realmente cancelar? As informações não serão salvas.")) {
+                window.location.href = "home.html";
+            }
         });
     }
 });
-

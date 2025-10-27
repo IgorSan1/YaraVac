@@ -3,7 +3,62 @@
     const searchBar = document.querySelector(".search-bar");
     let debounceId;
 
-    // Verificar se o usuario eh ADMIN e exibir o botao de cadastro de usuarios
+    // Função para decodificar o token JWT
+    function decodeJWT(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            console.error("Erro ao decodificar token:", e);
+            return null;
+        }
+    }
+
+    // Atualizar nome do usuário no header
+    function atualizarNomeUsuario() {
+        const token = localStorage.getItem("token");
+        if (token) {
+            const decodedToken = decodeJWT(token);
+            const username = decodedToken?.sub;
+            const role = decodedToken?.role;
+
+            if (username) {
+                const userProfileSpan = document.querySelector(".user-profile span");
+                if (userProfileSpan) {
+                    userProfileSpan.textContent = username;
+                }
+
+                // Adicionar badge de perfil se for ADMIN
+                if (role === 'ADMIN') {
+                    const userProfile = document.querySelector(".user-profile");
+                    if (userProfile && !userProfile.querySelector('.admin-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'admin-badge';
+                        badge.style.cssText = `
+                            background-color: #dc3545;
+                            color: white;
+                            font-size: 0.65rem;
+                            padding: 0.15rem 0.4rem;
+                            border-radius: 10px;
+                            margin-left: 0.3rem;
+                            font-weight: 700;
+                        `;
+                        badge.textContent = 'ADMIN';
+                        userProfile.appendChild(badge);
+                    }
+                }
+            }
+        }
+    }
+
+    // Chamar função ao carregar a página
+    atualizarNomeUsuario();
+
+    // Verificar se o usuário é ADMIN e exibir o botão de cadastro de usuários
     verificarPermissaoAdmin();
 
     async function verificarPermissaoAdmin() {
@@ -12,42 +67,16 @@
             return;
         }
 
-        try {
-            const resp = await fetch(`${API_BASE}/usuario/perfil`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-            });
+        // Decodificar o token para verificar a role
+        const decodedToken = decodeJWT(token);
+        const role = decodedToken?.role;
 
-            if (!resp.ok) {
-                return;
+        // Se for ADMIN, mostrar o botão de cadastro de usuário
+        if (role === 'ADMIN') {
+            const btnCadastroUsuario = document.getElementById("btnCadastroUsuario");
+            if (btnCadastroUsuario) {
+                btnCadastroUsuario.style.display = "";
             }
-
-            const data = await resp.json().catch(() => ({}));
-
-            // Normaliza possiveis formatos de resposta
-            let usuario = null;
-            if (Array.isArray(data?.dados) && Array.isArray(data.dados[0])) {
-                usuario = data.dados[0][0];
-            } else if (Array.isArray(data?.dados)) {
-                usuario = data.dados[0];
-            } else if (data?.dados) {
-                usuario = data.dados;
-            } else {
-                usuario = data;
-            }
-
-            // Verificar se o usuario tem a role ADMIN
-            if (usuario && usuario.roles && usuario.roles.includes("ADMIN")) {
-                const btnCadastroUsuario = document.getElementById("btnCadastroUsuario");
-                if (btnCadastroUsuario) {
-                    btnCadastroUsuario.style.display = "";
-                }
-            }
-        } catch (err) {
-            console.error("Erro ao verificar permissoes:", err);
         }
     }
 
@@ -163,4 +192,3 @@
         }
     }
 })();
-

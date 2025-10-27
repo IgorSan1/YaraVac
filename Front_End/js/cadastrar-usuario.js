@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const API_BASE = "http://localhost:8080/api/v1";
+    const API_BASE = window.API_CONFIG?.BASE_URL || "/api/v1";
     const form = document.getElementById("cadastroUsuarioForm");
     const btnCancelar = document.getElementById("btnCancelar");
 

@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const API_BASE = window.API_CONFIG?.BASE_URL || "/api/v1";
     const loginForm = document.querySelector(".auth-box form");
 
     loginForm.addEventListener("submit", async (event) => {
@@ -14,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const response = await fetch("http://localhost:8080/api/v1/auth/login", {
+            const response = await fetch(`${API_BASE}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ usuario, password }),
@@ -39,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (error) {
             console.error("Erro:", error);
-            alert("Erro ao conectar com o servidor.");
+            alert("Erro ao conectar com o servidor. Verifique sua conexão.");
         }
     });
 });

@@ -1,5 +1,5 @@
 (function(){
-    const API_BASE = "http://localhost:8080/api/v1";
+    const API_BASE = window.API_CONFIG?.BASE_URL || "/api/v1";
     const listaVacinas = document.getElementById("lista-vacinas");
     const vacinaNomeInput = document.getElementById("vacina-nome");
     const vacinaUuidInput = document.getElementById("vacina-uuid");

@@ -1,73 +1,66 @@
 app:
-  version: ${APP_VERSION}
+  version: ${APP_VERSION:1.0}
 
 api:
   security:
     token:
-      secret: ${JWT_SECRET:my-secret-key}
+      secret: ${JWT_SECRET:my-secret-key-change-in-production}
 
 server:
   servlet:
-    context-path: ${APP_CONTEXTO}
-  port: ${APP_PORT}
+    context-path: ${APP_CONTEXTO:/api/v1}
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
 
 spring:
   application:
-    name: ${APP_NOME}
+    name: ${APP_NOME:saude-indigena}
+  
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/saude_indigena}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:123}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
   jpa:
-    generate-ddl: true
-    show-sql: true
+    generate-ddl: false
+    show-sql: false
+    open-in-view: false
     properties:
       hibernate:
-        default_schema: ${DATABASE_SCHEMA}
+        default_schema: ${DATABASE_SCHEMA:saude}
+        format_sql: false
+        jdbc:
+          time_zone: America/Sao_Paulo
+  
   flyway:
     enabled: true
-    schemas: ${DATABASE_SCHEMA}
+    schemas: ${DATABASE_SCHEMA:saude}
+    baseline-on-migrate: true
+    validate-on-migrate: true
 
 springdoc:
   info:
-    title: Sa�de Ind�gena
-    description: Sistema de Sa�de Ind�gena
+    title: Saúde Indígena API
+    description: Sistema de Gerenciamento de Vacinação Indígena
 
 logging:
   level:
     root: INFO
-    org.springframework.web: INFO
-
-  file:
-    name: logs/saude-indigena.log
-
+    com.saude_indigena: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN
+  
   pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-  logback:
-    rollingpolicy:
-      fileNamePattern: logs/saude-indigena-%d{yyyy-MM-dd}.%i.log
-      maxFileSize: 10MB
-      maxHistory: 10
-      totalSizeCap: 1GB
-
-  console:
-    enabled: true
-    level: INFO
-
-  color:
-    enabled: true
-
-  spring:
-    lifecycle:
-      logging:
-      # level: DEBUG
-
-  http:
-    client:
-      request:
-        logging:
-          level: DEBUG
-      response:
-        logging:
-          level: DEBUG
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

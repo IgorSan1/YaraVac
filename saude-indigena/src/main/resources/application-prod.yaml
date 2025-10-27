@@ -1,0 +1,25 @@
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+  
+  datasource:
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+logging:
+  level:
+    root: WARN
+    com.saude_indigena: INFO
+    org.springframework: WARN
+    org.hibernate: WARN

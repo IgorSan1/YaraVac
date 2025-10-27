@@ -1,0 +1,50 @@
+services:
+  # Backend Spring Boot
+  - type: web
+    name: yaravac-backend
+    runtime: java
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: saude-indigena
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -Xmx256m -Dserver.port=$PORT -jar target/saude-indigena-0.0.1-SNAPSHOT.jar
+    healthCheckPath: /api/v1/actuator/health
+    envVars:
+      - key: APP_NOME
+        value: saude-indigena
+      - key: APP_VERSION
+        value: "1.0"
+      - key: APP_AMBIENTE
+        value: PROD
+      - key: APP_CONTEXTO
+        value: /api/v1
+      - key: APP_PORT
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yaravac-db
+          property: connectionString
+      - key: DATABASE_SCHEMA
+        value: saude
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: yaravac-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: yaravac-db
+          property: password
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JAVA_TOOL_OPTIONS
+        value: -Xmx256m -Xms128m
+
+databases:
+  - name: yaravac-db
+    databaseName: saude_indigena
+    user: postgres
+    plan: free
+    region: oregon
